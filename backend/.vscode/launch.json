@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Users API (launch)",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/Users/cmd/server",
+      "cwd": "${workspaceFolder}/Users",
+      "envFile": "${workspaceFolder}/Users/.env",
+      "env": {}
+    },
+    {
+      "name": "Attach to local :2345",
+      "type": "go",
+      "request": "attach",
+      "mode": "remote",
+      "host": "127.0.0.1",
+      "port": 2345,
+      "remotePath": "${workspaceFolder}/Users"
+    }
+  ]
+}

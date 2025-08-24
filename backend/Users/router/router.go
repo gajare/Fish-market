@@ -28,6 +28,11 @@ func New(c *controller.UserController) *mux.Router {
 	// Admin-only
 	admin := protected.NewRoute().Subrouter()
 	admin.Use(middleware.AllowRoles("admin"))
+
+	ac := controller.NewAdminController()
+	admin.HandleFunc("/admin/log-level", ac.GetLogLevel).Methods(http.MethodGet)
+	admin.HandleFunc("/admin/log-level", ac.SetLogLevel).Methods(http.MethodPut)
+
 	admin.HandleFunc("/users", c.List).Methods(http.MethodGet)
 	admin.HandleFunc("/users/{id}", c.Delete).Methods(http.MethodDelete)
 

@@ -15,6 +15,7 @@ import (
 )
 
 var DB *gorm.DB
+var gormLogger glogger.Interface
 
 func Connect() {
 	dsn := os.Getenv("DATABASE_URL")
@@ -22,42 +23,68 @@ func Connect() {
 		logger.Log.Fatal("DATABASE_URL not set")
 	}
 
-	sqlLevel := glogger.Warn
-	switch os.Getenv("LOG_SQL_LEVEL") { // "silent","error","warn","info"
-	case "silent":
-		sqlLevel = glogger.Silent
-	case "error":
-		sqlLevel = glogger.Error
-	case "info":
-		sqlLevel = glogger.Info
-	}
-	slowMs := 200
-	if v := os.Getenv("LOG_SQL_SLOW_MS"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			slowMs = n
-		}
-	}
+	gormLogger = makeGormLogger(envGormLevel(), EnvSlowMS())
 
-	// pipe GORM logs into logrus via std log writer
-	std := log.New(logger.Log.Writer(), "", 0)
-	gormLogger := glogger.New(
-		std,
-		glogger.Config{
-			SlowThreshold:             time.Duration(slowMs) * time.Millisecond,
-			LogLevel:                  sqlLevel,
-			IgnoreRecordNotFoundError: true,
-			Colorful:                  false,
-		},
-	)
-
-	gdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: gormLogger})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: gormLogger})
 	if err != nil {
 		logger.Log.Fatalf("gorm open: %v", err)
 	}
 
-	if err := gdb.AutoMigrate(&models.User{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}); err != nil {
 		logger.Log.Fatalf("automigrate: %v", err)
 	}
-	DB = gdb
+	DB = db
 	logger.With(map[string]any{"dsn": dsn}).Info("db_connected")
+}
+
+func makeGormLogger(level glogger.LogLevel, slowMs int) glogger.Interface {
+	std := log.New(logger.Log.Writer(), "", 0) // pipe to logrus writer
+	return glogger.New(std, glogger.Config{
+		SlowThreshold:             time.Duration(slowMs) * time.Millisecond,
+		LogLevel:                  level,
+		IgnoreRecordNotFoundError: true,
+		Colorful:                  false,
+	})
+}
+
+func envGormLevel() glogger.LogLevel {
+	switch os.Getenv("LOG_SQL_LEVEL") { // "silent","error","warn","info"
+	case "silent":
+		return glogger.Silent
+	case "error":
+		return glogger.Error
+	case "info":
+		return glogger.Info
+	default:
+		return glogger.Warn
+	}
+}
+
+func EnvSlowMS() int {
+	if v := os.Getenv("LOG_SQL_SLOW_MS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			return n
+		}
+	}
+	return 200
+}
+
+// SetSQLLogLevel lets you change SQL log level at runtime if you like.
+func SetSQLLogLevel(level string, slowMs int) {
+	gormLogger = makeGormLogger(stringToGormLevel(level), slowMs)
+	DB.Config.Logger = gormLogger
+	logger.With(map[string]any{"sql_level": level, "slow_ms": slowMs}).Info("gorm_logger_updated")
+}
+
+func stringToGormLevel(level string) glogger.LogLevel {
+	switch level {
+	case "silent":
+		return glogger.Silent
+	case "error":
+		return glogger.Error
+	case "info":
+		return glogger.Info
+	default:
+		return glogger.Warn
+	}
 }
