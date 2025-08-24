@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gajare/Fish-market/logger"
 	"github.com/gajare/Fish-market/middleware"
 	"github.com/gajare/Fish-market/models"
 	"github.com/gajare/Fish-market/service"
@@ -30,9 +31,11 @@ func (c *UserController) Register(w http.ResponseWriter, r *http.Request) {
 	canSetRole := ok && role == "Admin"
 	u, err := c.S.Create(r.Context(), dto, canSetRole)
 	if err != nil {
+		logger.With(map[string]any{"api": "POST /auth/register", "error": err.Error()}).Warn("failed")
 		utils.Error(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	logger.With(map[string]any{"api": "POST /auth/register"}).Debug("hit")
 	u.PasswordHash = ""
 	utils.JSON(w, http.StatusCreated, u)
 }

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gajare/Fish-market/db"
+	"github.com/gajare/Fish-market/logger"
 	"github.com/gajare/Fish-market/models"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -53,6 +54,8 @@ func (s *UserService) Create(ctx context.Context, dto models.CreateUserDTO, canS
 	if err := s.db.WithContext(ctx).Create(&u).Error; err != nil {
 		return models.User{}, err
 	}
+	// after successful create:
+	logger.With(map[string]any{"event": "user_created", "user_id": u.ID, "email": u.Email, "role": u.Role}).Info("db_write")
 	return u, nil
 }
 
@@ -102,10 +105,18 @@ func (s *UserService) Update(ctx context.Context, id uint, dto models.UpdateUser
 	if err := s.db.WithContext(ctx).Save(&u).Error; err != nil {
 		return u, err
 	}
+	// after successful update:
+	logger.With(map[string]any{
+		"event":   "user_updated",
+		"user_id": u.ID}).Info("db_write")
 	return u, nil
 }
 
 func (s *UserService) Delete(ctx context.Context, id uint) error {
+	// after successful delete:
+	logger.With(map[string]any{
+		"event": "user_deleted", "user_id": id}).Info("db_write")
+
 	return s.db.WithContext(ctx).Delete(&models.User{}, id).Error
 }
 
@@ -115,7 +126,18 @@ func (s *UserService) Login(ctx context.Context, email, password string) (models
 		return models.User{}, errors.New("invalid credentials")
 	}
 	if err := s.comparedPassword(u.PasswordHash, password); err != nil {
+		logger.With(map[string]any{
+			"event": "login_failed",
+			"email": email,
+		}).Warn("auth")
+
 		return models.User{}, errors.New("invalid credentils")
 	}
+	// on login success (debug), on failure (warn)
+	logger.With(map[string]any{
+		"event":   "login_success",
+		"user_id": u.ID,
+	}).Debug("auth")
+
 	return u, nil
 }

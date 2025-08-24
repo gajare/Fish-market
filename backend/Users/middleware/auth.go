@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gajare/Fish-market/pkg/ctxkeys"
 	"github.com/gajare/Fish-market/utils"
 )
 
@@ -28,8 +29,8 @@ func Auth(next http.Handler) http.Handler {
 			utils.Error(w, http.StatusUnauthorized, "invalid token")
 			return
 		}
-		ctx := context.WithValue(r.Context(), ctxUserID, claims.UserID)
-		ctx = context.WithValue(ctx, ctxUserRole, claims.Role)
+		ctx := context.WithValue(r.Context(), ctxkeys.UserID, claims.UserID)
+		ctx = context.WithValue(ctx, ctxkeys.Role, claims.Role)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

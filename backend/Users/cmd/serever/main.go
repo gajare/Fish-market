@@ -7,6 +7,7 @@ import (
 
 	"github.com/gajare/Fish-market/controller"
 	"github.com/gajare/Fish-market/db"
+	"github.com/gajare/Fish-market/logger"
 	"github.com/gajare/Fish-market/router"
 	"github.com/gajare/Fish-market/service"
 	"github.com/joho/godotenv"
@@ -15,6 +16,7 @@ import (
 func main() {
 	_ = godotenv.Load()
 
+	logger.Init()
 	db.Connect()
 
 	svc := service.NewUserService()

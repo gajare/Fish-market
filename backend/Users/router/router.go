@@ -10,7 +10,10 @@ import (
 )
 
 func New(c *controller.UserController) *mux.Router {
-	r := mux.NewRouter()
+	r := mux.NewRouter().StrictSlash(true)
+	// global middlewares
+	r.Use(middleware.RequestID) // injects req_id
+	r.Use(middleware.AccessLog) // logs every request
 
 	api := r.PathPrefix("/api/v1").Subrouter()
 
